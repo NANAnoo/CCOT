@@ -16,25 +16,18 @@ ASYNC(IntGenerator, int, fibonacci, int max; int a; int b;)
         co_return(IntGenerator, this->a + this->b)
 ASYNC_END
 
-char map_c(int x) {
-    return x + 'a';
-}
-
-char map_c2(int x) {
-    return x <= 1 ? '\n' : 'x';
-}
-
 ASYNC(IntGenerator, int, co_main)
     CO_INIT(IntGenerator, gen, list, 10)
 
     // for each test
     LAMBDA(IntGenerator, foreach, {
         printf("cb %d \n", cb->x);
-    }, 3);
+    }, 3)
 
+    // map test
     CO_LAMBDA(IntGenerator, gen_2, map, {
         cb_return(cb->x + 'a' - 1);
-    }, gen);
+    }, gen)
 
     while (CALL(IntGenerator, gen_2, has_next)) {
         int x = CALL(IntGenerator, gen_2, next);
@@ -42,11 +35,11 @@ ASYNC(IntGenerator, int, co_main)
             printf("A-%c\n", x);
     }
 
-    CO_INIT(IntGenerator, gen_4, list, 9)
     // flat map test
+    CO_INIT(IntGenerator, gen_4, list, 9)
     CO_LAMBDA(IntGenerator, gen_3, flat_map, {
         cb_return(cb->x + '0');
-    }, gen_4);
+    }, gen_4)
 
     while (CALL(IntGenerator, gen_3, has_next)) {
         char res = CALL(IntGenerator, gen_3, next);

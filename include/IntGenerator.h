@@ -56,8 +56,8 @@ awaiter_type *IMPL(IntGenerator, await_transform, CO_ARGS(IntGenerator, int valu
 })
 // -----------------
 
-capture(IntGenerator, int, foreach, int x;)
-void IMPL(IntGenerator, foreach, CO_ARGS(IntGenerator, lambda_type(IntGenerator, foreach) *cb, int max), {
+capture(IntGenerator, int, foreach, US int x;)
+void __attribute__((unused)) IMPL(IntGenerator, foreach, CO_ARGS(IntGenerator, lambda_type(IntGenerator, foreach) *cb, int max), {
     int i = 0;
     while(CALL(IntGenerator, this, has_next) && i ++ < max) {
         callback(cb, {
@@ -76,12 +76,9 @@ ASYNC_END
 capture(IntGenerator, char, map_cb, int x;)
 ASYNC(IntGenerator, char, map, lambda_type(IntGenerator, map_cb) *cb; int cb_state; IntGenerator *other;)
     while(CALL(IntGenerator, this->other, has_next)) {
-        this->cb->_handle_._co_handle_->state = - this->cb_state;
-        this->cb->_handle_._co_handle_->_cb_handle_ = (lambda_handle *)this->cb;
-        callback(this->cb, {
+        co_callback(this->cb, {
             this->cb->x = CALL(IntGenerator, this->other, next);
         });
-        this->cb->_handle_._co_handle_->state = this->cb_state;
         co_yield(IntGenerator, this->cb->_ret_);
     }
     co_return_void(IntGenerator)
@@ -94,12 +91,9 @@ ASYNC(IntGenerator, char, flat_map, lambda_type(IntGenerator, flat_map_cb) *cb; 
         CO_NEW(IntGenerator, map, list, len);
         this->temp = map;
         while(CALL(IntGenerator, this->temp, has_next)) {
-            this->cb->_handle_._co_handle_->state = - this->cb_state;
-            this->cb->_handle_._co_handle_->_cb_handle_ = (lambda_handle *)this->cb;
-            callback(this->cb, {
+            co_callback(this->cb, {
                 this->cb->x = CALL(IntGenerator, this->temp, next);
             });
-            this->cb->_handle_._co_handle_->state = this->cb_state;
             co_yield(IntGenerator, this->cb->_ret_);
         }
         free(this->temp);

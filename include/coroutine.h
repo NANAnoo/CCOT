@@ -136,7 +136,13 @@ return NULL;          \
 do expr while(0); \
 ((lambda_handle *)cb)->_co_handle_->resume(((lambda_handle *)cb)->_co_handle_);
 
-#define callback_end(cb) ((lambda_handle *)cb)->_co_handle_->state = ((lambda_handle *)cb)->return_state;callback(cb, {});
+#define co_callback(cb, expr) \
+cb->_handle_._co_handle_->state = - this->cb_state;\
+cb->_handle_._co_handle_->_cb_handle_ = (lambda_handle *)cb;\
+do expr while(0); \
+((lambda_handle *)cb)->_co_handle_->resume(((lambda_handle *)cb)->_co_handle_);\
+cb->_handle_._co_handle_->state = this->cb_state;
+
 
 #define LAMBDA(T, func, expr, ...) \
     do {\
