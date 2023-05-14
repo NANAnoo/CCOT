@@ -56,7 +56,7 @@ awaiter_type *IMPL(IntGenerator, await_transform, CO_ARGS(IntGenerator, int valu
 })
 // -----------------
 
-capture(IntGenerator, int, foreach, US int x;)
+capture(IntGenerator, int, foreach, int x;)
 void __attribute__((unused)) IMPL(IntGenerator, foreach, CO_ARGS(IntGenerator, lambda_type(IntGenerator, foreach) *cb, int max), {
     int i = 0;
     while(CALL(IntGenerator, this, has_next) && i ++ < max) {
