@@ -52,9 +52,10 @@ struct promise_handle {
     };\
     typedef struct T T;
 
-#define LAMBDA_CAPTURE(T, ...) \
+#define LAMBDA_CAPTURE(T, ret, ...) \
     struct T {\
         lambda_handle _handle_;\
+        ret _ret_;             \
         __VA_ARGS__\
     };\
     typedef struct T T;
@@ -104,7 +105,7 @@ static awaiter_type suspend_never  = {
 #define co_yield(T, value) this->yield_awaiter = T##_await_transform(this->promise, value); co_await(this->yield_awaiter);
 
 #define co_return(T, value) T##_return_value(&CO, value) ; return &CO;
-#define co_return_void CO.return_void(); return &CO;
+#define co_return_void(T) T##_return_void((promise_handle *)&CO); return &CO;
 
 #define ASYNC(T, yield_type, func, ...) \
 COROUTINE_CAPTURE(T##CAP##func, __VA_ARGS__ T *promise; awaiter_type *init_awaiter; awaiter_type *final_awaiter; awaiter_type *yield_awaiter;) \
@@ -127,7 +128,7 @@ T * func(T##CAP##func *this) {\
 return NULL;          \
 }
 
-#define capture(T, which, ...)LAMBDA_CAPTURE(T##which##lambda __VA_OPT__(,) __VA_ARGS__)
+#define capture(T, ret, which, ...)LAMBDA_CAPTURE(T##which##lambda, ret __VA_OPT__(,) __VA_ARGS__)
 
 #define lambda_type(T, which) T##which##lambda
 
@@ -143,7 +144,7 @@ do expr while(0); \
         handle->_cb_handle_ = (lambda_handle *) (&cb);\
         handle->state = -__LINE__;\
         CALL(T, gen, func, &cb __VA_OPT__(,) __VA_ARGS__);\
-        case __LINE__:;\
+        case __LINE__: if (handle->state == __LINE__) return &CO; else handle->state = __LINE__;\
     } while (0);              \
     do {                      \
     case -__LINE__ :\
@@ -158,7 +159,6 @@ do expr while(0); \
     capture(T, func __VA_OPT__(,) __VA_ARGS__) \
     ret IMPL(T, func, CO_ARGS(T, lambda_type(T, func) *cb),{ \
          do {expr;}while(0);                 \
-         callback_end(cb);                   \
     }) \
 
 #define CO (*this->promise)
@@ -166,5 +166,30 @@ do expr while(0); \
 #define CO_INIT(T, name, func, ...) \
     T##CAP##func name##T##_cr_handle_ = {{.state = 0, .resume = T##_resume_##func} __VA_OPT__(,) __VA_ARGS__}; \
     T *name = func(&name##T##_cr_handle_);\
+
+#define CO_NEW(T, name, func, ...) \
+    T##CAP##func name##T##_cr_handle_ = {{.state = 0, .resume = T##_resume_##func} __VA_OPT__(,) __VA_ARGS__}; \
+    T##CAP##func *name##T##_cr_handle_ptr = malloc(sizeof(T##CAP##func));                                      \
+    memcpy(name##T##_cr_handle_ptr, &name##T##_cr_handle_, sizeof(T##CAP##func));                               \
+    T *name = func(name##T##_cr_handle_ptr);\
+
+#define CO_LAMBDA(T, name, func, expr, ...)\
+do {\
+case -__LINE__: if (handle->state == -__LINE__) {\
+lambda_type(T, func##_cb) *cb = (lambda_type(T, func##_cb) *)this->_handle_._cb_handle_;\
+do expr while(0);\
+return &CO;\
+}\
+case __LINE__ :\
+if (handle->state == __LINE__) {\
+return &CO;\
+} else {\
+handle->state = __LINE__;\
+}\
+} while(0);\
+lambda_type(T, func##_cb) name##_cb = {{0, handle}};\
+CO_INIT(T, name, func, &name##_cb, __LINE__ __VA_OPT__(,) __VA_ARGS__)\
+
+#define cb_return(expr) cb->_ret_ = expr
 
 #endif //CCOT_COROUTINE_H
