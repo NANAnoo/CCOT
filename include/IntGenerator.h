@@ -14,7 +14,7 @@
 
 PROMISE(IntGenerator,
         int value;
-int valid;
+        int valid;
 )
 
 int IMPL(IntGenerator, has_next, CO_ARGS(IntGenerator), {
@@ -35,11 +35,12 @@ IntGenerator* IMPL(IntGenerator, get_return_obj, CO_ARGS(IntGenerator), {
 
 void IMPL(IntGenerator, return_void, CO_ARGS(promise_handle), {
     this->valid = 0;
+    this->valid = 0;
 })
 
 void IMPL(IntGenerator, return_value, CO_ARGS(IntGenerator, int value), {
-this->value = value;
-this->valid = 0;
+    this->value = value;
+    this->valid = 0;
 })
 
 awaiter_type *IMPL(IntGenerator, initial_suspend, CO_ARGS(promise_handle), {
@@ -49,21 +50,62 @@ awaiter_type *IMPL(IntGenerator, final_suspend, CO_ARGS(promise_handle), {
     return &suspend_never;
 })
 awaiter_type *IMPL(IntGenerator, await_transform, CO_ARGS(IntGenerator, int value), {
-this->value = value;
-this->valid = 1;
-return &suspend_always;
+    this->value = value;
+    this->valid = 1;
+    return &suspend_always;
 })
 // -----------------
 
-capture(IntGenerator, foreach, int x;)
+capture(IntGenerator, int, foreach, int x;)
 void IMPL(IntGenerator, foreach, CO_ARGS(IntGenerator, lambda_type(IntGenerator, foreach) *cb, int max), {
-int i = 0;
-while(CALL(IntGenerator, this, has_next) && i ++ < max) {
-callback(cb, {
-cb->x = CALL(IntGenerator, this, next);
-});
-}
-callback_end(cb);
+    int i = 0;
+    while(CALL(IntGenerator, this, has_next) && i ++ < max) {
+        callback(cb, {
+        cb->x = CALL(IntGenerator, this, next);
+        });
+    }
 })
+
+ASYNC(IntGenerator, char, list, int N; int i;)
+    for(this->i = 0; this->i < this->N - 1; this->i++) {
+        co_yield(IntGenerator, this->i + 1);
+    }
+    co_return(IntGenerator, this->N);
+ASYNC_END
+
+capture(IntGenerator, char, map_cb, int x;)
+ASYNC(IntGenerator, char, map, lambda_type(IntGenerator, map_cb) *cb; int cb_state; IntGenerator *other;)
+    while(CALL(IntGenerator, this->other, has_next)) {
+        this->cb->_handle_._co_handle_->state = - this->cb_state;
+        this->cb->_handle_._co_handle_->_cb_handle_ = (lambda_handle *)this->cb;
+        callback(this->cb, {
+            this->cb->x = CALL(IntGenerator, this->other, next);
+        });
+        this->cb->_handle_._co_handle_->state = this->cb_state;
+        co_yield(IntGenerator, this->cb->_ret_);
+    }
+    co_return_void(IntGenerator)
+ASYNC_END
+
+capture(IntGenerator, char, flat_map_cb, int x;)
+ASYNC(IntGenerator, char, flat_map, lambda_type(IntGenerator, flat_map_cb) *cb; int cb_state; IntGenerator *other; IntGenerator *temp;)
+    while(CALL(IntGenerator, this->other, has_next)) {
+        int len = CALL(IntGenerator, this->other, next);
+        CO_NEW(IntGenerator, map, list, len);
+        this->temp = map;
+        while(CALL(IntGenerator, this->temp, has_next)) {
+            this->cb->_handle_._co_handle_->state = - this->cb_state;
+            this->cb->_handle_._co_handle_->_cb_handle_ = (lambda_handle *)this->cb;
+            callback(this->cb, {
+                this->cb->x = CALL(IntGenerator, this->temp, next);
+            });
+            this->cb->_handle_._co_handle_->state = this->cb_state;
+            co_yield(IntGenerator, this->cb->_ret_);
+        }
+        free(this->temp);
+        this->temp = NULL;
+    }
+    co_return_void(IntGenerator);
+ASYNC_END
 
 #endif //CCOT_INTGENERATOR_H
