@@ -127,31 +127,6 @@ T * func(T##CAP##func *this) {\
 return NULL;          \
 }
 
-
-//#define lambda(T, which, expr, ...) \
-//    LAMBDA_CAPTURE(T##which##lambda __VA_OPT__(,) __VA_ARGS__) \
-//    const static int T##which##lambda_ID = __LINE__;                  \
-//    do {                                \
-//        case __LINE__:{             \
-//              if (handle->state == __LINE__) {                      \
-//                  T##which##lambda *cb = (T##which##lambda *)handle->_cb_handle_;\
-//                  do expr while(0);         \
-//                  handle->state = handle->_cb_handle_->return_state;\
-//                  return &CO;           \
-//            } \
-//        }\
-//    } while (0);
-//
-//#define callback(T, expr, assign, ...) \
-//     lambda(T, __LINE__, expr, ...)   \
-//     do {                             \
-//          T##which##lambda lb = {{.return_state = handle->state, ._co_handle_ = handle}}; \
-//          do{assign;}while()                           \
-//          handle->_cb_handle_ = (lambda_handle *)(&lb);      \
-//          handle->state = T##which##lambda_ID;\
-//          handle->resume(handle);    \
-//     } while(0);
-
 #define capture(T, which, ...)LAMBDA_CAPTURE(T##which##lambda __VA_OPT__(,) __VA_ARGS__)
 
 #define lambda_type(T, which) T##which##lambda
