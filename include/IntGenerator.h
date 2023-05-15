@@ -72,10 +72,10 @@ awaiter_type *IMPL(IntGenerator, await_transform, CO_ARGS(IntGenerator, int valu
 // -----------------
 // COROUTINE: IntGenerator list();
 ASYNC(IntGenerator, char, list, int begin; int end; int i;)
-        for($$(i) = $$(begin); $$(i) < $$(end); $$(i)++) {
+        for($(i) = $(begin); $(i) < $(end); $(i)++) {
             co_yield(IntGenerator, this->i)
         }
-        co_return(IntGenerator, $$(end))
+        co_return(IntGenerator, $(end))
 ASYNC_END
 
 // IntGenerator::foreach([(int x)->int] callback, int max)
@@ -105,10 +105,10 @@ CB_ASYNC(IntGenerator, char, flat_map, IntGeneratorRef, IntGenerator *other; int
     while(CALL(IntGenerator, this->other, has_next)) {
         $eval(cb, {cb->x = CALL(IntGenerator, this->other, next);})
         while (CALL(IntGenerator, $cb_ret, has_next)) {
-            $$(ret_val) = CALL(IntGenerator, $cb_ret, next);
-            co_yield(IntGenerator, $$(ret_val));
-            if (! $cb_ret && ! $$(other)) {
-                co_return(IntGenerator, $$(ret_val));
+            $(ret_val) = CALL(IntGenerator, $cb_ret, next);
+            co_yield(IntGenerator, $(ret_val));
+            if (! $cb_ret && ! $(other)) {
+                co_return(IntGenerator, $(ret_val));
             }
         }
     }

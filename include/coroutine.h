@@ -275,6 +275,10 @@ do expr while(0); \
         }\
     } while(0);
 
-#define $$(x) this->x
+// this->value
+#define $(x) this->x
+
+// express variables in the lambda expression
+#define $$(x) cb->x
 
 #endif //CCOT_COROUTINE_H

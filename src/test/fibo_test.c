@@ -19,18 +19,18 @@ ASYNC(IntGenerator, int, co_main, IntGenerator *gen2;IntGenerator *gen4;)
 
     // for each test
     LB_CALL(IntGenerator, &gen, foreach, int, {
-        printf("cb %d \n", cb->x);
+        printf("cb %d \n", $$(x));
     }, 3)
 
     if (gen) {
         // map test
-        LB_CO_NEW(IntGenerator, $$(gen2), map, char, {
-            cb_return(cb->x + 'a');
+        LB_CO_NEW(IntGenerator, $(gen2), map, char, {
+            cb_return($$(x) + 'a');
         }, gen)
 
         // consume gen until no output
-        while (CALL(IntGenerator, $$(gen2), has_next)) {
-            printf("A-%c\n", CALL(IntGenerator, $$(gen2), next));
+        while (CALL(IntGenerator, $(gen2), has_next)) {
+            printf("A-%c\n", CALL(IntGenerator, $(gen2), next));
         }
     }
 
@@ -38,18 +38,18 @@ ASYNC(IntGenerator, int, co_main, IntGenerator *gen2;IntGenerator *gen4;)
     // fibonacci(5)
     CO_NEW(IntGenerator, gen_3, fibonacci, 5)
     // -> flat_map( (x) -> return list(x) )
-    LB_CO_NEW(IntGenerator, $$(gen4), flat_map, IntGeneratorRef, {
-        CO_NEW(IntGenerator, temp, list, 0, cb->x);
+    LB_CO_NEW(IntGenerator, $(gen4), flat_map, IntGeneratorRef, {
+        CO_NEW(IntGenerator, temp, list, 0, $$(x));
         cb_return(temp);
     }, gen_3)
     // -> map( (x) -> return x != 0 ? 'x' : '\n' )
-    LB_CO_NEW(IntGenerator, $$(gen2), map, char, {
-        if (cb->x == 0) printf("\nfibonacci : ");
-        cb_return(cb->x != 0 ? 'x' : '\n');
-    }, $$(gen4))
+    LB_CO_NEW(IntGenerator, $(gen2), map, char, {
+        if ($$(x) == 0) printf("\nfibonacci : ");
+        cb_return($$(x) != 0 ? 'x' : '\n');
+    }, $(gen4))
     // -> foreach( (x) -> printf("%c", x) )
-    LB_CALL(IntGenerator, &$$(gen2), foreach, int, {
-        printf("%c ", cb->x);
+    LB_CALL(IntGenerator, &$(gen2), foreach, int, {
+        printf("%c ", $$(x));
     }, 1000)
 
     co_return(IntGenerator, 0)
