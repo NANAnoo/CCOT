@@ -212,7 +212,7 @@ do expr while(0); \
 #define CB_ARGS(T, cb_ret, func, ...) (T ** _this, lambda_type(T, cb_ret, func) *cb __VA_OPT__(,) __VA_ARGS__)
 #define CB_IMPL(F_ret, T, func, args, expr, cb_ret, ...) \
     LAMBDA_CAPTURE(lambda_type(T, cb_ret, func), cb_ret __VA_OPT__(,) __VA_ARGS__)\
-    F_ret IMPL(T, func, args, {\
+    F_ret IMPL(T, cb_ret##func, args, {\
          do {expr;}while(0);\
          if (this == NULL) *_this = NULL;\
     })
@@ -221,7 +221,7 @@ do expr while(0); \
     do {\
         lambda_type(T, ret, func) cb = {{__LINE__, handle}};\
         handle->_cb_handle_ = (lambda_handle *) (&cb);\
-        CALL(T, *name, func, &cb __VA_OPT__(,) __VA_ARGS__);\
+        CALL(T, *name, ret##func, &cb __VA_OPT__(,) __VA_ARGS__);\
         handle->state = __LINE__;              \
     } while (0);              \
     do {                      \

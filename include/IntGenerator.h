@@ -86,6 +86,14 @@ CB_IMPL(void, IntGenerator, foreach, CB_ARGS(IntGenerator, int, foreach, int max
     }
 }, int, int x;)
 
+// IntGenerator::foreach([(int x)->int] callback, int max)
+CB_IMPL(void, IntGenerator, foreach, CB_ARGS(IntGenerator, char, foreach, int max),{
+    int i = 0;
+    while(CALL(IntGenerator, this, has_next) && i ++ < max) {
+        $eval(cb, {cb->x = CALL(IntGenerator, this, next);});
+    }
+}, char, int x;)
+
 // COROUTINE: IntGenerator::map([(int x)->char] callback, IntGenerator *other)
 $lambda(IntGenerator, char, map, int x;)
 CB_ASYNC(IntGenerator, char, map, char, IntGenerator *other; IntGenerator *temp;)

@@ -48,7 +48,7 @@ ASYNC(IntGenerator, int, co_main, IntGenerator *gen2;IntGenerator *gen4;)
         cb_return($$(x) != 0 ? 'x' : '\n');
     }, $(gen4))
     // -> foreach( (x) -> printf("%c", x) )
-    LB_CALL(IntGenerator, &$(gen2), foreach, int, {
+    LB_CALL(IntGenerator, &$(gen2), foreach, char, {
         printf("%c ", $$(x));
     }, 1000)
 
