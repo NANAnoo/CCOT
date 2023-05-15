@@ -23,7 +23,7 @@ ASYNC(IntGenerator, int, co_main, IntGenerator *gen2;IntGenerator *gen4;)
     }, 3)
 
     if (gen) {
-        // map test,
+        // map test
         LB_CO_NEW(IntGenerator, $$(gen2), map, char, {
             cb_return(cb->x + 'a');
         }, gen)
@@ -35,9 +35,9 @@ ASYNC(IntGenerator, int, co_main, IntGenerator *gen2;IntGenerator *gen4;)
     }
 
     // flat map, chain call
-    // gen_3
+    // fibonacci(5)
     CO_NEW(IntGenerator, gen_3, fibonacci, 5)
-    // -> flat_map( (x) -> return fibonacci(x) )
+    // -> flat_map( (x) -> return list(x) )
     LB_CO_NEW(IntGenerator, $$(gen4), flat_map, IntGeneratorRef, {
         CO_NEW(IntGenerator, temp, list, 0, cb->x);
         cb_return(temp);
