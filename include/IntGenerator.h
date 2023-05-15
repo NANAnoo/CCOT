@@ -8,23 +8,38 @@
 #include "coroutine.h"
 #include "struct_class.h"
 
-
-#include <stdlib.h>
-#include <string.h>
-
 PROMISE(IntGenerator,
         int value;
         int valid;
 )
 
 int IMPL(IntGenerator, has_next, CO_ARGS(IntGenerator), {
-    return this->valid == 1;
+    return this != NULL && this->valid == 1;
 })
 
-int IMPL(IntGenerator, next, CO_ARGS(IntGenerator), {
-    this->_co_handle_->resume(this->_co_handle_);
-    return this->value;
-})
+//int IMPL(IntGenerator, next, CO_ARGS(IntGenerator), {
+//    this->_co_handle_->resume(this->_co_handle_);
+//    int ret = this->value;
+//    if (this->_co_handle_ == NULL) {
+//        m_free(this, "IntGenerator");
+//        this = NULL;
+//    }
+//    return ret;
+//})
+
+__attribute__((unused))int IntGenerator_next(IntGenerator**_this) {
+    IntGenerator *this = (IntGenerator *) (*_this);
+    do {
+        {
+            this->_co_handle_->resume(this->_co_handle_);
+            int ret = this->value;
+            if (this->_co_handle_ == ((void *) 0)) {
+                FREE_THIS;
+            }
+            return ret;
+        }
+    } while (0);
+}
 
 // ---------------
 IntGenerator* IMPL(IntGenerator, get_return_obj, CO_ARGS(IntGenerator), {
@@ -35,7 +50,7 @@ IntGenerator* IMPL(IntGenerator, get_return_obj, CO_ARGS(IntGenerator), {
 
 void IMPL(IntGenerator, return_void, CO_ARGS(promise_handle), {
     this->valid = 0;
-    this->valid = 0;
+    this->value = 0;
 })
 
 void IMPL(IntGenerator, return_value, CO_ARGS(IntGenerator, int value), {
@@ -47,7 +62,7 @@ awaiter_type *IMPL(IntGenerator, initial_suspend, CO_ARGS(promise_handle), {
     return &suspend_always;
 })
 awaiter_type *IMPL(IntGenerator, final_suspend, CO_ARGS(promise_handle), {
-    return &suspend_never;
+    return &suspend_clean;
 })
 awaiter_type *IMPL(IntGenerator, await_transform, CO_ARGS(IntGenerator, int value), {
     this->value = value;
@@ -55,51 +70,51 @@ awaiter_type *IMPL(IntGenerator, await_transform, CO_ARGS(IntGenerator, int valu
     return &suspend_always;
 })
 // -----------------
+// COROUTINE: IntGenerator list();
+ASYNC(IntGenerator, char, list, int begin; int end; int i;)
+        for($$(i) = $$(begin); $$(i) < $$(end); $$(i)++) {
+            co_yield(IntGenerator, this->i)
+        }
+        co_return(IntGenerator, $$(end))
+ASYNC_END
 
-capture(IntGenerator, int, foreach, int x;)
-void __attribute__((unused)) IMPL(IntGenerator, foreach, CO_ARGS(IntGenerator, lambda_type(IntGenerator, foreach) *cb, int max), {
+// IntGenerator::foreach([(int x)->int] callback, int max)
+CB_IMPL(void, IntGenerator, foreach, CB_ARGS(IntGenerator, int, foreach, int max),{
     int i = 0;
     while(CALL(IntGenerator, this, has_next) && i ++ < max) {
-        callback(cb, {
-        cb->x = CALL(IntGenerator, this, next);
-        });
+        $eval(cb, {cb->x = CALL(IntGenerator, this, next);});
     }
-})
+}, int, int x;)
 
-ASYNC(IntGenerator, char, list, int N; int i;)
-    for(this->i = 0; this->i < this->N - 1; this->i++) {
-        co_yield(IntGenerator, this->i + 1);
-    }
-    co_return(IntGenerator, this->N);
-ASYNC_END
-
-capture(IntGenerator, char, map_cb, int x;)
-ASYNC(IntGenerator, char, map, lambda_type(IntGenerator, map_cb) *cb; int cb_state; IntGenerator *other;)
+// COROUTINE: IntGenerator::map([(int x)->char] callback, IntGenerator *other)
+$lambda(IntGenerator, char, map, int x;)
+CB_ASYNC(IntGenerator, char, map, char, IntGenerator *other; IntGenerator *temp;)
     while(CALL(IntGenerator, this->other, has_next)) {
-        co_callback(this->cb, {
-            this->cb->x = CALL(IntGenerator, this->other, next);
-        });
-        co_yield(IntGenerator, this->cb->_ret_);
-    }
-    co_return_void(IntGenerator)
-ASYNC_END
-
-capture(IntGenerator, char, flat_map_cb, int x;)
-ASYNC(IntGenerator, char, flat_map, lambda_type(IntGenerator, flat_map_cb) *cb; int cb_state; IntGenerator *other; IntGenerator *temp;)
-    while(CALL(IntGenerator, this->other, has_next)) {
-        int len = CALL(IntGenerator, this->other, next);
-        CO_NEW(IntGenerator, map, list, len);
-        this->temp = map;
-        while(CALL(IntGenerator, this->temp, has_next)) {
-            co_callback(this->cb, {
-                this->cb->x = CALL(IntGenerator, this->temp, next);
-            });
-            co_yield(IntGenerator, this->cb->_ret_);
+        $eval(cb, {cb->x = CALL(IntGenerator, this->other, next);})
+        if (this->other) {
+            co_yield(IntGenerator, $cb_ret)
         }
-        free(this->temp);
-        this->temp = NULL;
     }
-    co_return_void(IntGenerator);
+    co_return(IntGenerator, $cb_ret)
 ASYNC_END
+
+// COROUTINE: IntGenerator::flat_map([(int x)->char] callback, IntGenerator *gen)
+typedef IntGenerator * IntGeneratorRef;
+$lambda(IntGenerator, IntGeneratorRef, flat_map, int x;)
+CB_ASYNC(IntGenerator, char, flat_map, IntGeneratorRef, IntGenerator *other; int ret_val;)
+    while(CALL(IntGenerator, this->other, has_next)) {
+        $eval(cb, {cb->x = CALL(IntGenerator, this->other, next);})
+        while (CALL(IntGenerator, $cb_ret, has_next)) {
+            $$(ret_val) = CALL(IntGenerator, $cb_ret, next);
+            co_yield(IntGenerator, $$(ret_val));
+            if (! $cb_ret && ! $$(other)) {
+                co_return(IntGenerator, $$(ret_val));
+            }
+        }
+    }
+    co_return(IntGenerator, 0)
+ASYNC_END
+
+#define KILL_INTGENERATOR(gen) while(gen) CALL(IntGenerator, gen, next);
 
 #endif //CCOT_INTGENERATOR_H
