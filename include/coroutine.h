@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//#define MALLOC_DEBUG
+#define MALLOC_DEBUG
 
 #ifdef MALLOC_DEBUG
 static int m_count = 0, f_count = 0;
@@ -44,6 +44,7 @@ struct coroutine_handle {
     int state;
     int on_stack;
     void (*resume)(coroutine_handle *);
+    void (*onFree)(coroutine_handle **);
     promise_handle *promise;
     awaiter_type *init_awaiter;
     awaiter_type *final_awaiter;
@@ -101,6 +102,12 @@ struct promise_handle {
     };\
     typedef struct T T;
 
+void IMPL(coroutine_handle, onFree, CO_ARGS(coroutine_handle), {
+    if (!this->on_stack) {
+        m_free(this,"coroutine");
+    }
+})
+
 int IMPL(awaiter_type, suspend_always, CO_ARGS(awaiter_type), {
     return 0;
 })
@@ -116,9 +123,7 @@ void IMPL(awaiter_type, clean_suspend, CO_ARGS(awaiter_type, coroutine_handle *c
         // equal promise->coroutine_handle = NULL;
         *(ptr + sizeof(promise_handle) / sizeof(coroutine_handle *)) = ((void *) 0);
         co->promise = NULL;
-        if (!co->on_stack) {
-            m_free(co,"coroutine");
-        }
+        co->onFree(&co);
     }
 })
 
@@ -187,11 +192,11 @@ return NULL;          \
 }
 
 #define CO_INIT(T, name, func, ...) \
-    T##CAP##func name##T##_cr_handle_ = {{.state = 0, .on_stack = 1, .resume = T##_resume_##func} __VA_OPT__(,) __VA_ARGS__}; \
+    T##CAP##func name##T##_cr_handle_ = {{.state = 0, .on_stack = 1, .resume = T##_resume_##func, .onFree = &FUNC(coroutine_handle, onFree)} __VA_OPT__(,) __VA_ARGS__}; \
     T *name = func(&name##T##_cr_handle_);\
 
 #define CO_NEW(T, name, func, ...) \
-    T##CAP##func name##T##_cr_handle_ = {{.state = 0, .on_stack = 0,.resume = T##_resume_##func} __VA_OPT__(,) __VA_ARGS__}; \
+    T##CAP##func name##T##_cr_handle_ = {{.state = 0, .on_stack = 0,.resume = T##_resume_##func, .onFree = &FUNC(coroutine_handle, onFree)} __VA_OPT__(,) __VA_ARGS__}; \
     T##CAP##func *name##T##_cr_handle_ptr = m_malloc(sizeof(T##CAP##func), #func);                                      \
     memcpy(name##T##_cr_handle_ptr, &name##T##_cr_handle_, sizeof(T##CAP##func));                               \
     T *name = func(name##T##_cr_handle_ptr);\
@@ -235,6 +240,14 @@ do expr while(0); \
 
 #define CB_ASYNC(T, yield_type, func, cb_ret, ...)\
     COROUTINE_CAPTURE(T##CAP##func, lambda_type(T, cb_ret, func) *cb; __VA_ARGS__) \
+    void cb_ret##func##lambdaFree(coroutine_handle **handle) {\
+          T##CAP##func *_handle = (T##CAP##func *)*handle;    \
+          if (_handle->cb) {                       \
+            m_free(_handle->cb, "lambda_handle"); \
+            _handle->cb = NULL;                       \
+          }                                        \
+          coroutine_handle_onFree(handle);\
+    }                                              \
     T * func(T##CAP##func *this); \
     void T##_resume_##func (coroutine_handle *_cr_handle) {\
         func((T##CAP##func *)_cr_handle);\
@@ -255,15 +268,15 @@ do expr while(0); \
         }\
         co_await(handle->init_awaiter);
 
-
-// TODO free lambda_handle func##_cb in LB_CO_NEW(...)
 #define LB_CO_NEW(T, name, func, ret, expr, ...)\
     do {                                            \
         lambda_type(T, ret, func) *func##_cb = m_malloc(sizeof(lambda_type(T, ret, func)), "lambda_handle");\
         func##_cb->_handle_.callback_state = __LINE__;\
         func##_cb->_handle_._co_handle_ = handle;\
-        CO_NEW(T, temp, func, func##_cb __VA_OPT__(,) __VA_ARGS__)\
-        name = temp;\
+        T##CAP##func ret##T##_cr_handle_ = {{.state = 0, .on_stack = 0,.resume = T##_resume_##func, .onFree = &ret##func##lambdaFree}, func##_cb __VA_OPT__(,) __VA_ARGS__}; \
+        T##CAP##func *ret##T##_cr_handle_ptr = m_malloc(sizeof(T##CAP##func), #func);                                      \
+        memcpy(ret##T##_cr_handle_ptr, &ret##T##_cr_handle_, sizeof(T##CAP##func));                               \
+        name = func(ret##T##_cr_handle_ptr);\
         handle->state = __LINE__;              \
     } while (0);\
     do {                      \
