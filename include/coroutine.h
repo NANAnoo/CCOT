@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MALLOC_DEBUG
+//#define MALLOC_DEBUG
 
 #ifdef MALLOC_DEBUG
 static int m_count = 0, f_count = 0;
