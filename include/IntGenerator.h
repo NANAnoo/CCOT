@@ -17,29 +17,14 @@ int IMPL(IntGenerator, has_next, CO_ARGS(IntGenerator), {
     return this != NULL && this->valid == 1;
 })
 
-//int IMPL(IntGenerator, next, CO_ARGS(IntGenerator), {
-//    this->_co_handle_->resume(this->_co_handle_);
-//    int ret = this->value;
-//    if (this->_co_handle_ == NULL) {
-//        m_free(this, "IntGenerator");
-//        this = NULL;
-//    }
-//    return ret;
-//})
-
-__attribute__((unused))int IntGenerator_next(IntGenerator**_this) {
-    IntGenerator *this = (IntGenerator *) (*_this);
-    do {
-        {
-            this->_co_handle_->resume(this->_co_handle_);
-            int ret = this->value;
-            if (this->_co_handle_ == ((void *) 0)) {
-                FREE_THIS;
-            }
-            return ret;
-        }
-    } while (0);
-}
+int IMPL(IntGenerator, next, CO_ARGS(IntGenerator), {
+    this->_co_handle_->resume(this->_co_handle_);
+    int ret = this->value;
+    if (this->_co_handle_ == ((void *) 0)) {
+        FREE_THIS;
+    }
+    return ret;
+})
 
 // ---------------
 IntGenerator* IMPL(IntGenerator, get_return_obj, CO_ARGS(IntGenerator), {
