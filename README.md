@@ -1,4 +1,4 @@
-# stack free coroutine in C
+# stackless coroutine in C
 
 # C 无栈协程
 
